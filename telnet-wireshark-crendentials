@@ -1,0 +1,74 @@
+#!/usr/bin/python
+
+"""
+Extract telnet credentials from WireShark plain text dump.
+"""
+
+def extractData(f):
+    data = list()
+    for l in f:
+        if "   Data:" in l:
+            data.append( "".join(l.split()[1:]) ) 
+    return data
+
+def getStringIndexes(data, string):
+    ret = list()
+    for i in range(len(data)):
+        if string in data[i]:
+            ret.append(i+1)
+    return ret
+
+def checkBackspace(char, lst):
+    ret = lst
+    if char == "\\177" and len(lst) != 0:
+        del ret[-1]
+        if len(ret) != 0:
+            del ret[-1]
+    return ret
+
+def extractOneLogin(data, i):
+    login = list()
+    parity = i%2
+
+    while not "\\r" in data[i]:
+        if i%2 == parity:
+            login.append( data[i] )
+            checkBackspace(data[i], login)
+        i+=1
+
+    return "".join(login)
+
+def extractOnePassword(data, i):
+    passwd = list()
+
+    while not "\\r" in data[i]:
+        passwd.append( data[i] )
+        checkBackspace(data[i], passwd)
+        i+=1
+
+    return "".join(passwd)
+
+def extractCredentials(data):
+    ret = list()
+
+    for i,j in zip( getStringIndexes(data, "login:"), getStringIndexes(data, "Password:") ):
+        ret.append( (extractOneLogin(data, i), extractOnePassword(data, j)) )
+
+    return ret
+
+
+if __name__ == "__main__":
+    from sys import argv, exit
+
+    if len(argv) != 2:
+        print "Usage : telnet_wireshark_credentials [plain text file]"
+        print "To generate the plain text file, in Wireshark, click File -> Export Packets Dissections -> As Plain Text"
+        print "Ensure you clicked on \"Infos\" panel"
+        exit(0)
+
+
+    f = open(argv[1], 'r')
+
+    data = extractData(f)
+    for login, passwd in extractCredentials(data):
+        print "{} : {}".format(login, passwd)
