@@ -1,0 +1,7 @@
+#!/bin/bash
+if [ $(id -u) -ne 0 ]; then
+    echo "Must be run as root. Exiting..."
+    exit 1
+else
+    python /home/leo/HackingScripts/mitm-arp-poisoning.py $@
+fi
